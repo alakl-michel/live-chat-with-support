@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+
+    <style>
+        .selected{
+            color: blue;
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="app">
+        
+        <ul><!--list of available clients for the admin to chat with -->
+            <li v-for="(user, index) in Users" v-bind:class="{ selected: user.userId === this.room  }" :key="index">
+                {{user.userId}} 
+                <button @click="joinRoom(user.userId)">chat</button>
+            </li>
+        </ul>
+
+        <div v-if="room !== ''"> <!--if chatroom selected then open chat room -->
+
+            <div>
+                <div v-for="(chat, index) in myChatRoom" :key="index">
+                    <label>{{ chat.name}} : </label>
+                    <span>{{ chat.msg}}</span>
+                </div>
+            </div>
+                
+            <form @submit.prevent="createPost">
+                <input type="text" v-model="message" placeholder="Write message.."/>
+                <button type="submit">Send</button>
+            </form>
+
+       </div>
+
+
+    </div>
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/vue@next"></script>
+
+    <script>
+        const socket = io("/admin")
+        const app = Vue.createApp({
+            el: '#app',
+            data(){
+                return {
+                    room : '', 
+                    message:'',
+                    Users : []
+                }
+            },
+            created(){
+                socket.on('refreshUsers', data => {
+                    this.Users = data
+                    // so if the currently selected room not available anymore we can close its chatRoom
+                    if(!data.find( item => item.userId === this.room )) this.room = ''
+                })
+            },
+            methods:{
+                createPost(){
+                    socket.emit('message', { name : 'support', msg:this.message, room : this.room })
+                },
+                joinRoom(userId){
+                    this.room = userId
+                    socket.emit('joinRoom', this.room )
+                }
+            },
+            computed: {
+                myChatRoom() {
+                    return this.Users.find( item => item.userId === this.room ).Chats
+                }
+            }
+        })
+        app.mount('#app')
+    </script>
+
+</body>
+</html>
